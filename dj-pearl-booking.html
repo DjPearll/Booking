@@ -568,6 +568,14 @@
     text-align:center;
     max-width:420px;
   }
+  .form-status{
+    font-size:0.85rem;
+    text-align:center;
+    min-height:1.2em;
+  }
+  .form-status.success{ color:var(--gold-soft); }
+  .form-status.error{ color:#D97757; }
+  .btn-gold:disabled{ opacity:0.6; cursor:default; transform:none; }
 
   @media (max-width:640px){
     form#bookingForm{ grid-template-columns:1fr; padding:2rem 1.5rem 1.8rem; }
@@ -743,19 +751,19 @@
   <form id="bookingForm" class="reveal">
     <div class="field">
       <label for="fName">Full Name</label>
-      <input type="text" id="fName" required>
+      <input type="text" id="fName" name="name" required>
     </div>
     <div class="field">
       <label for="fEmail">Email</label>
-      <input type="email" id="fEmail" required>
+      <input type="email" id="fEmail" name="email" required>
     </div>
     <div class="field">
       <label for="fPhone">Phone</label>
-      <input type="tel" id="fPhone">
+      <input type="tel" id="fPhone" name="phone">
     </div>
     <div class="field">
       <label for="fEventType">Event Type</label>
-      <select id="fEventType">
+      <select id="fEventType" name="eventType">
         <option>Wedding</option>
         <option>Engagement</option>
         <option>Prom</option>
@@ -765,27 +773,29 @@
     </div>
     <div class="field">
       <label for="fDate">Event Date</label>
-      <input type="date" id="fDate">
+      <input type="date" id="fDate" name="date">
       <span class="date-warning" id="fDateWarning"></span>
     </div>
     <div class="field">
       <label for="fGuests">Estimated Guests</label>
-      <input type="number" id="fGuests" min="1" placeholder="e.g. 150">
+      <input type="number" id="fGuests" name="guests" min="1" placeholder="e.g. 150">
     </div>
     <div class="field full">
       <label for="fVenue">Venue / Location</label>
-      <input type="text" id="fVenue" placeholder="Venue name or city">
+      <input type="text" id="fVenue" name="venue" placeholder="Venue name or city">
     </div>
     <div class="field full">
       <label for="fMessage">Tell me about your event</label>
-      <textarea id="fMessage" placeholder="Vibe, must-play songs, timeline — anything helpful."></textarea>
+      <textarea id="fMessage" name="message" placeholder="Vibe, must-play songs, timeline — anything helpful."></textarea>
     </div>
+    <input type="hidden" name="_subject" id="fSubject">
     <div class="book-submit-row">
-      <button type="submit" class="btn-gold">
+      <button type="submit" class="btn-gold" id="bookSubmitBtn">
         Send Booking Request
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
-      <p class="book-note">This opens your email app with everything filled in, ready to send straight to DJ Pearl.</p>
+      <p class="book-note">Your request goes straight to DJ Pearl — you'll hear back personally.</p>
+      <p class="form-status" id="formStatus"></p>
     </div>
   </form>
 </section>
@@ -938,39 +948,50 @@ function checkDateWarning(){
   return isBooked;
 }
 
-document.getElementById('bookingForm').addEventListener('submit', function(e){
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xjgnbqol';
+
+document.getElementById('bookingForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  const name = document.getElementById('fName').value;
-  const email = document.getElementById('fEmail').value;
-  const phone = document.getElementById('fPhone').value;
-  const eventType = document.getElementById('fEventType').value;
-  const date = document.getElementById('fDate').value;
-  const guests = document.getElementById('fGuests').value;
-  const venue = document.getElementById('fVenue').value;
 
   if(checkDateWarning()){
     document.getElementById('fDate').scrollIntoView({ behavior:'smooth', block:'center' });
     return;
   }
-  const message = document.getElementById('fMessage').value;
 
-  const subject = `Booking Request — ${eventType} — ${name}`;
-  const body =
-`New booking request from the website:
+  const form = e.target;
+  const submitBtn = document.getElementById('bookSubmitBtn');
+  const status = document.getElementById('formStatus');
 
-Name: ${name}
-Email: ${email}
-Phone: ${phone}
-Event Type: ${eventType}
-Event Date: ${date}
-Estimated Guests: ${guests}
-Venue / Location: ${venue}
+  const name = document.getElementById('fName').value;
+  const eventType = document.getElementById('fEventType').value;
+  document.getElementById('fSubject').value = `Booking Request — ${eventType} — ${name}`;
 
-Message:
-${message}`;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending…';
+  status.className = 'form-status';
+  status.textContent = '';
 
-  const mailto = `mailto:djjpearl@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href = mailto;
+  try{
+    const res = await fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if(res.ok){
+      status.className = 'form-status success';
+      status.textContent = "Thank you — your request has been sent. DJ Pearl will be in touch personally.";
+      form.reset();
+    } else {
+      throw new Error('Formspree responded with an error.');
+    }
+  } catch(err){
+    status.className = 'form-status error';
+    status.textContent = "Something went wrong sending that. Please email djjpearl@gmail.com directly.";
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'Send Booking Request <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  }
 });
 </script>
 
