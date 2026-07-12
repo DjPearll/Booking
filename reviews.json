@@ -1,3 +1,10 @@
 {
-  "reviews": []
+  "reviews": [
+    {
+      "name": "Test Client",
+      "eventType": "Wedding",
+      "quote": "Automated verification review — please ignore.",
+      "image": "reviews/999999-test.png"
+    }
+  ]
 }
